@@ -1,10 +1,10 @@
 import contextlib
 import json
+from collections import defaultdict
 
 import cv2
 import pandas as pd
 from PIL import Image
-from collections import defaultdict
 
 from utils import *
 
@@ -29,7 +29,9 @@ def convert_infolks_json(name, files, img_path):
         f = glob.glob(img_path + Path(x["json_file"]).stem + ".*")[0]
         file_name.append(f)
         wh.append(exif_size(Image.open(f)))  # (width, height)
-        cat.extend(a["classTitle"].lower() for a in x["output"]["objects"])  # categories
+        cat.extend(
+            a["classTitle"].lower() for a in x["output"]["objects"]
+        )  # categories
 
         # filename
         with open(name + ".txt", "a") as file:
@@ -56,7 +58,12 @@ def convert_infolks_json(name, files, img_path):
                 box = np.array(a["points"]["exterior"], dtype=np.float32).ravel()
                 box[[0, 2]] /= wh[i][0]  # normalize x by width
                 box[[1, 3]] /= wh[i][1]  # normalize y by height
-                box = [box[[0, 2]].mean(), box[[1, 3]].mean(), box[2] - box[0], box[3] - box[1]]  # xywh
+                box = [
+                    box[[0, 2]].mean(),
+                    box[[1, 3]].mean(),
+                    box[2] - box[0],
+                    box[3] - box[1],
+                ]  # xywh
                 if (box[2] > 0.0) and (box[3] > 0.0):  # if w > 0 and h > 0
                     file.write("%g %.6f %.6f %.6f %.6f\n" % (category_id, *box))
 
@@ -117,17 +124,27 @@ def convert_vott_json(name, files, img_path):
 
                         # The INFOLKS bounding box format is [x-min, y-min, x-max, y-max]
                         box = a["boundingBox"]
-                        box = np.array([box["left"], box["top"], box["width"], box["height"]]).ravel()
+                        box = np.array(
+                            [box["left"], box["top"], box["width"], box["height"]]
+                        ).ravel()
                         box[[0, 2]] /= wh[0]  # normalize x by width
                         box[[1, 3]] /= wh[1]  # normalize y by height
-                        box = [box[0] + box[2] / 2, box[1] + box[3] / 2, box[2], box[3]]  # xywh
+                        box = [
+                            box[0] + box[2] / 2,
+                            box[1] + box[3] / 2,
+                            box[2],
+                            box[3],
+                        ]  # xywh
 
                         if (box[2] > 0.0) and (box[3] > 0.0):  # if w > 0 and h > 0
                             file.write("%g %.6f %.6f %.6f %.6f\n" % (category_id, *box))
         else:
             missing_images.append(x["asset"]["name"])
 
-    print("Attempted %g json imports, found %g images, imported %g annotations successfully" % (i, n1, n2))
+    print(
+        "Attempted %g json imports, found %g images, imported %g annotations successfully"
+        % (i, n1, n2)
+    )
     if len(missing_images):
         print("WARNING, missing images:", missing_images)
 
@@ -144,7 +161,8 @@ def convert_ath_json(json_dir):  # dir contains json annotations and images
     jsons = []
     for dirpath, dirnames, filenames in os.walk(json_dir):
         jsons.extend(
-            os.path.join(dirpath, filename) for filename in [f for f in filenames if f.lower().endswith(".json")]
+            os.path.join(dirpath, filename)
+            for filename in [f for f in filenames if f.lower().endswith(".json")]
         )
 
     # Import json
@@ -166,7 +184,9 @@ def convert_ath_json(json_dir):  # dir contains json annotations and images
         #     [f.write('%s\n' % a) for a in names]
 
         # Write labels file
-        for x in tqdm(data["_via_img_metadata"].values(), desc=f"Processing {json_file}"):
+        for x in tqdm(
+            data["_via_img_metadata"].values(), desc=f"Processing {json_file}"
+        ):
             image_file = str(Path(json_file).parent / x["filename"])
             f = glob.glob(image_file)  # image file
             if len(f):
@@ -191,7 +211,8 @@ def convert_ath_json(json_dir):  # dir contains json annotations and images
                                 # bounding box format is [x-min, y-min, x-max, y-max]
                                 box = a["shape_attributes"]
                                 box = np.array(
-                                    [box["x"], box["y"], box["width"], box["height"]], dtype=np.float32
+                                    [box["x"], box["y"], box["width"], box["height"]],
+                                    dtype=np.float32,
                                 ).ravel()
                                 box[[0, 2]] /= wh[0]  # normalize x by width
                                 box[[1, 3]] /= wh[1]  # normalize y by height
@@ -203,7 +224,9 @@ def convert_ath_json(json_dir):  # dir contains json annotations and images
                                 ]  # xywh (left-top to center x-y)
 
                                 if box[2] > 0.0 and box[3] > 0.0:  # if w > 0 and h > 0
-                                    file.write("%g %.6f %.6f %.6f %.6f\n" % (category_id, *box))
+                                    file.write(
+                                        "%g %.6f %.6f %.6f %.6f\n" % (category_id, *box)
+                                    )
                                     n3 += 1
                                     nlabels += 1
 
@@ -219,7 +242,11 @@ def convert_ath_json(json_dir):  # dir contains json annotations and images
                         r = img_size / max(img.shape)  # size ratio
                         if r < 1:  # downsize if necessary
                             h, w, _ = img.shape
-                            img = cv2.resize(img, (int(w * r), int(h * r)), interpolation=cv2.INTER_AREA)
+                            img = cv2.resize(
+                                img,
+                                (int(w * r), int(h * r)),
+                                interpolation=cv2.INTER_AREA,
+                            )
 
                         ifile = dir + "images/" + Path(f).name
                         if cv2.imwrite(ifile, img):  # if success append image to list
@@ -253,14 +280,18 @@ def convert_ath_json(json_dir):  # dir contains json annotations and images
     print(f"Done. Output saved to {Path(dir).absolute()}")
 
 
-def convert_coco_json(json_dir="../coco/annotations/", use_segments=False, cls91to80=False):
+def convert_coco_json(
+    json_dir="../coco/annotations/", use_segments=False, cls91to80=False
+):
     """Converts COCO JSON format to YOLO label format, with options for segments and class mapping."""
     save_dir = make_dirs()  # output directory
     coco80 = coco91_to_coco80_class()
 
     # Import json
     for json_file in sorted(Path(json_dir).resolve().glob("*.json")):
-        fn = Path(save_dir) / "labels" / json_file.stem.replace("instances_", "")  # folder name
+        fn = (
+            Path(save_dir) / "labels" / json_file.stem.replace("instances_", "")
+        )  # folder name
         fn.mkdir()
         with open(json_file) as f:
             data = json.load(f)
@@ -290,7 +321,11 @@ def convert_coco_json(json_dir="../coco/annotations/", use_segments=False, cls91
                 if box[2] <= 0 or box[3] <= 0:  # if w <= 0 and h <= 0
                     continue
 
-                cls = coco80[ann["category_id"] - 1] if cls91to80 else ann["category_id"] - 1  # class
+                cls = (
+                    coco80[ann["category_id"] - 1]
+                    if cls91to80
+                    else ann["category_id"] - 1
+                )  # class
                 box = [cls] + box.tolist()
                 if box not in bboxes:
                     bboxes.append(box)
@@ -298,10 +333,20 @@ def convert_coco_json(json_dir="../coco/annotations/", use_segments=False, cls91
                 if use_segments:
                     if len(ann["segmentation"]) > 1:
                         s = merge_multi_segment(ann["segmentation"])
-                        s = (np.concatenate(s, axis=0) / np.array([w, h])).reshape(-1).tolist()
+                        s = (
+                            (np.concatenate(s, axis=0) / np.array([w, h]))
+                            .reshape(-1)
+                            .tolist()
+                        )
                     else:
-                        s = [j for i in ann["segmentation"] for j in i]  # all segments concatenated
-                        s = (np.array(s).reshape(-1, 2) / np.array([w, h])).reshape(-1).tolist()
+                        s = [
+                            j for i in ann["segmentation"] for j in i
+                        ]  # all segments concatenated
+                        s = (
+                            (np.array(s).reshape(-1, 2) / np.array([w, h]))
+                            .reshape(-1)
+                            .tolist()
+                        )
                     s = [cls] + s
                     if s not in segments:
                         segments.append(s)
@@ -309,7 +354,9 @@ def convert_coco_json(json_dir="../coco/annotations/", use_segments=False, cls91
             # Write
             with open((fn / f).with_suffix(".txt"), "a") as file:
                 for i in range(len(bboxes)):
-                    line = (*(segments[i] if use_segments else bboxes[i]),)  # cls, box or segments
+                    line = (
+                        *(segments[i] if use_segments else bboxes[i]),
+                    )  # cls, box or segments
                     file.write(("%g " * len(line)).rstrip() % line + "\n")
 
 
@@ -387,27 +434,29 @@ def delete_dsstore(path="../datasets"):
 
 
 if __name__ == "__main__":
+    # pass
+
     source = "COCO"
 
     if source == "COCO":
         convert_coco_json(
-            "../datasets/coco/annotations",  # directory with *.json
-            use_segments=True,
+            "../chv_dataset_coco/annotations",  # directory with *.json
+            use_segments=False,
             cls91to80=True,
         )
 
-    elif source == "infolks":  # Infolks https://infolks.info/
-        convert_infolks_json(name="out", files="../data/sm4/json/*.json", img_path="../data/sm4/images/")
+    # elif source == "infolks":  # Infolks https://infolks.info/
+    #     convert_infolks_json(name="out", files="../data/sm4/json/*.json", img_path="../data/sm4/images/")
 
-    elif source == "vott":  # VoTT https://github.com/microsoft/VoTT
-        convert_vott_json(
-            name="data",
-            files="../../Downloads/athena_day/20190715/*.json",
-            img_path="../../Downloads/athena_day/20190715/",
-        )  # images folder
+    # elif source == "vott":  # VoTT https://github.com/microsoft/VoTT
+    #     convert_vott_json(
+    #         name="data",
+    #         files="../../Downloads/athena_day/20190715/*.json",
+    #         img_path="../../Downloads/athena_day/20190715/",
+    #     )  # images folder
 
-    elif source == "ath":  # ath format
-        convert_ath_json(json_dir="../../Downloads/athena/")  # images folder
+    # elif source == "ath":  # ath format
+    #     convert_ath_json(json_dir="../../Downloads/athena/")  # images folder
 
-    # zip results
-    # os.system('zip -r ../coco.zip ../coco')
+    # # zip results
+    # # os.system('zip -r ../coco.zip ../coco')

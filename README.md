@@ -1,3 +1,31 @@
+## Personal Notes (Usage)
+
+Converts COCO JSON format to YOLO format.
+
+This script provides a command-line interface for easy conversion.
+
+**Usage:**
+
+```bash
+python coco2yolo.py --json_dir path/to/coco_json_files --use_segments
+
+# For converting COCO classes from 91 to 80 categories:
+python coco2yolo.py --json_dir path/to/coco_json_files --cls91to80
+
+# For default behavior (no segmentation, 91 classes):
+python coco2yolo.py --json_dir path/to/coco_json_files
+```
+
+**Arguments:**
+
+- `--json_dir`: (Optional) Path to the directory containing JSON annotation files (*.json). If not provided, assumes the default location of "coco/annotations".
+- `--use_segments`: (Optional) Flag to include segmentation information in the output (for COCO only).
+  Defaults to False.
+- `--cls91to80`: (Optional) Flag to convert COCO classes from 91 to 80 categories (for COCO only).
+  Defaults to False.
+
+---
+
 <br>
 <img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320">
 
